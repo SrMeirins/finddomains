@@ -1,0 +1,8 @@
+alienvault:
+  api_key: ""  # AlienVault no requiere clave API, dejar vacío
+securitytrails:
+  api_key: ""  # Rellenar
+crt.sh:
+  api_key: "" # Crt.sh no requiere clave API, dejar vacío
+virustotal:
+  api_key: "" # Rellenar
