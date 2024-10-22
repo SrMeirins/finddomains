@@ -52,6 +52,8 @@ Actualmente, la herramienta utiliza las siguientes fuentes para recolectar subdo
 
 🔹 VirusTotal (requiere API Key)
 
+🔹 CertSpotter
+
 
 ## 🛠 Futuras Mejoras
 
