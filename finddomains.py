@@ -4,6 +4,7 @@ import re
 import json
 import yaml
 import requests
+import sys
 from colorama import Fore, Style, init
 from pwn import log
 
@@ -13,28 +14,23 @@ init(autoreset=True)
 # Lista para registrar errores durante la ejecución
 error_log = []
 
+# Expresión regular para validar dominios
+DOMAIN_REGEX = r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,63}$"
+
 # Función para mostrar el banner
 def show_banner():
     banner = f"""
-{Fore.CYAN}###{Style.RESET_ALL}
-{Fore.GREEN}#############################
-#                           #
-#       Herramienta         #
-#        finddomains        #
-#                           #
-#      Creado por:          #
-#        SrMeirins          #
-#                           #
-#  Esta herramienta busca   #
-#  subdominios asociados    #
-#  a un dominio dado.       #
-#############################{Style.RESET_ALL}
-{Fore.CYAN}###{Style.RESET_ALL}
+{Fore.CYAN}#################################################################
+{Fore.GREEN}                             FINDDOMAINS TOOL                   
+{Fore.GREEN}-----------------------------------------------------------------
+{Fore.RESET}                       Creado por: SrMeirins                 
+{Fore.GREEN}-----------------------------------------------------------------
+{Fore.RESET}   Esta herramienta busca subdominios asociados a un dominio    
+{Fore.RESET}   dado, proporcionando un método eficiente para el descubrimiento.
+{Fore.GREEN}-----------------------------------------------------------------
+{Fore.CYAN}#################################################################{Style.RESET_ALL}
 """
     print(banner)
-
-# Expresión regular para validar dominios
-DOMAIN_REGEX = r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,63}$"
 
 # Cargar todas las claves de API desde el archivo YAML
 def load_api_keys():
@@ -130,6 +126,29 @@ def get_virustotal_domains(domain, api_key):
         error_log.append(f"Error al obtener datos de VirusTotal: {e}")
         return {}
 
+# Obtener subdominios de CertSpotter
+def get_certspotter_domains(domain):
+    task = log.progress("Consultando CertSpotter")
+    try:
+        response = requests.get(f"https://api.certspotter.com/v1/issuances?domain={domain}&include_subdomains=true&expand=dns_names")
+        response.raise_for_status()
+        data = response.json()
+        
+        # Extraer los nombres de dominio de los certificados
+        subdomains = {}
+        for entry in data:
+            dns_names = entry.get("dns_names", [])
+            for subdomain in dns_names:
+                if domain in subdomain:  # Filtrar solo los que contienen el dominio base
+                    subdomains[subdomain] = ["CertSpotter"]
+        
+        task.success("Completado")
+        return subdomains
+    except requests.RequestException as e:
+        task.failure("Error")
+        error_log.append(f"Error al obtener datos de CertSpotter: {e}")
+        return {}
+
 # Combinar resultados de múltiples fuentes y eliminar duplicados
 def get_combined_domains(domain, api_keys):
     combined_domains = {}
@@ -160,6 +179,11 @@ def get_combined_domains(domain, api_keys):
     else:
         error_log.append("VirusTotal API key no encontrada o no válida en el archivo APIs.yaml.")
 
+    # Obtener subdominios de CertSpotter
+    certspotter_results = get_certspotter_domains(domain)
+    for subdomain, sources in certspotter_results.items():
+        combined_domains.setdefault(subdomain, []).extend(sources)
+      
     # Eliminar duplicados en las listas de fuentes
     for subdomain in combined_domains:
         combined_domains[subdomain] = list(set(combined_domains[subdomain]))
@@ -185,46 +209,52 @@ parser = argparse.ArgumentParser(description="Herramienta para encontrar subdomi
 parser.add_argument("-d", "--dominio", help="Especifica el dominio para buscar subdominios.")
 args = parser.parse_args()
 
-# Mostrar banner
-show_banner()
+if __name__ == '__main__':
+    try:
+        # Mostrar banner
+        show_banner()
 
-# Obtener el dominio del usuario si no se proporcionó en la línea de comandos
-dominio = args.dominio or input(f"{Fore.CYAN}Por favor, introduce el dominio para buscar los subdominios:\nDominio: {Style.RESET_ALL}")
+        # Obtener el dominio del usuario si no se proporcionó en la línea de comandos
+        dominio = args.dominio or input(f"{Fore.CYAN}Por favor, introduce el dominio para buscar los subdominios:\nDominio: {Style.RESET_ALL}")
 
-# Validar el dominio ingresado
-if not re.match(DOMAIN_REGEX, dominio):
-    print(f"{Fore.RED}Error: Has proporcionado un dominio no válido.")
-    sys.exit(1)
+        # Validar el dominio ingresado
+        if not re.match(DOMAIN_REGEX, dominio):
+            print(f"{Fore.RED}Error: Has proporcionado un dominio no válido.")
+            sys.exit(1)
 
-# Cargar las API keys de todas las fuentes definidas en el archivo YAML
-api_keys = load_api_keys()
+        # Cargar las API keys de todas las fuentes definidas en el archivo YAML
+        api_keys = load_api_keys()
 
-# Definir los nombres de los archivos de salida
-filename = f"./{dominio}_domains.txt"
-detailed_filename = f"./{dominio}_domains_with_sources.txt"
+        # Definir los nombres de los archivos de salida
+        filename = f"./{dominio}_domains.txt"
+        detailed_filename = f"./{dominio}_domains_with_sources.txt"
 
-# Obtener y procesar dominios de todas las fuentes
-print(f"\n{Fore.CYAN}Obteniendo dominios y subdominios asociados para: {Fore.GREEN}{dominio}{Style.RESET_ALL}\n")
-result = get_combined_domains(dominio, api_keys)
+        # Obtener y procesar dominios de todas las fuentes
+        print(f"\n{Fore.CYAN}Obteniendo dominios y subdominios asociados para: {Fore.GREEN}{dominio}{Style.RESET_ALL}\n")
+        result = get_combined_domains(dominio, api_keys)
 
-# Verificar si hay resultados
-if not result:
-    print(f"{Fore.RED}No se encontraron dominios o subdominios para {Fore.GREEN}{dominio}{Style.RESET_ALL}\n")
-else:
-    # Guardar los resultados en los archivos
-    save_to_files(filename, result, detailed_filename)
+        # Verificar si hay resultados
+        if not result:
+            print(f"{Fore.RED}No se encontraron dominios o subdominios para {Fore.GREEN}{dominio}{Style.RESET_ALL}\n")
+        else:
+            # Guardar los resultados en los archivos
+            save_to_files(filename, result, detailed_filename)
 
-    # Mostrar los resultados en líneas separadas
-    print(f"\n{Fore.CYAN}Dominios encontrados:{Style.RESET_ALL}")
-    for domain in result.keys():
-        print(f"{Fore.GREEN}{domain}{Style.RESET_ALL}")
+            # Mostrar los resultados en líneas separadas
+            print(f"\n{Fore.CYAN}Dominios encontrados:{Style.RESET_ALL}")
+            for domain in result.keys():
+                print(f"{Fore.GREEN}{domain}{Style.RESET_ALL}")
 
-    # Confirmar que se ha guardado en el archivo
-    print(f"\n{Fore.CYAN}Los resultados han sido guardados en: {Fore.GREEN}{filename}{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}Los resultados detallados han sido guardados en: {Fore.GREEN}{detailed_filename}{Style.RESET_ALL}")
+            # Confirmar que se ha guardado en el archivo
+            print(f"\n{Fore.CYAN}Los resultados han sido guardados en: {Fore.GREEN}{filename}{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}Los resultados detallados han sido guardados en: {Fore.GREEN}{detailed_filename}{Style.RESET_ALL}")
 
-# Mostrar errores si los hay
-if error_log:
-    print(f"\n{Fore.RED}Errores encontrados durante la ejecución:{Style.RESET_ALL}")
-    for error in error_log:
-        print(f"{Fore.RED}- {error}{Style.RESET_ALL}")
+        # Mostrar errores si los hay
+        if error_log:
+            print(f"\n{Fore.RED}Errores encontrados durante la ejecución:{Style.RESET_ALL}")
+            for error in error_log:
+                print(f"{Fore.RED}- {error}{Style.RESET_ALL}")
+
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}Ejecución interrumpida por el usuario. Saliendo...{Style.RESET_ALL}")
+        sys.exit(0)
