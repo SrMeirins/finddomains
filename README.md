@@ -14,7 +14,7 @@ Para comenzar a usar la herramienta, sigue estos pasos:
 
 1. Clona el repositorio:
 ```bash
-git clone https://github.com/tu-usuario/finddomains.git
+https://github.com/SrMeirins/finddomains.git
 cd finddomains
 ```
 2. Instala los requisitos:
