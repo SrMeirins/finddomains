@@ -10,19 +10,57 @@
 
 ## ⚙️ Instalación
 
-Para comenzar a usar la herramienta, sigue estos pasos:
+Para evitar conflictos con otras dependencias de Python en tu sistema, es recomendable crear un entorno virtual y trabajar dentro de él.
 
-1. Clona el repositorio:
-```bash
-https://github.com/SrMeirins/finddomains.git
-cd finddomains
-```
-2. Instala los requisitos:
+### VENV
 
-```bash
-pip install -r requirements.txt
-```
+#### Windows
 
+1. Abre PowerShell o la terminal de tu preferencia.
+2. Crea un entorno virtual en el directorio donde desees almacenar el proyecto:
+   ```bash
+   python -m venv venv
+   ```
+3. Activa el entorno virtual:
+   ```bash
+   .\venv\Scripts\activate
+   ```
+
+#### Linux
+
+1. Abre la terminal.
+2. Crea un entorno virtual en el directorio donde desees almacenar el proyecto:
+   ```bash
+   python3 -m venv venv
+   ```
+3. Activa el entorno virtual:
+   ```bash
+   source venv/bin/activate
+   ```
+
+### Clonar el repositorio
+
+1. Una vez que hayas creado y activado el entorno virtual, clona el repositorio del proyecto:
+
+   ```bash
+   git clone https://github.com/SrMeirins/finddomains.git
+   ```
+
+2. Navega al directorio del proyecto recién clonado:
+
+   ```bash
+   cd finddomains
+   ```
+
+### Instalación de dependencias
+
+Una vez que estés en el directorio del repositorio y dentro del entorno virtual, instala las dependencias necesarias usando el archivo `requirements.txt` que contiene las librerías del proyecto.
+
+1. Instala las dependencias ejecutando el siguiente comando:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   
 > **Asegúrate de tener configuradas tus claves de API en `APIs.yaml` (es necesario que el archivo se llame exactamente así).**
 
 ## 📋 Uso
