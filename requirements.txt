@@ -1,9 +1,4 @@
-argparse
-colorama
-pwn
-requests
 pyyaml
-os
-re
-json
-sys
+requests
+colorama
+pwntools
