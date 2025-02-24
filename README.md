@@ -12,6 +12,20 @@
 
 Para evitar conflictos con otras dependencias de Python en tu sistema, es recomendable crear un entorno virtual y trabajar dentro de él.
 
+### Clonar el repositorio
+
+1. Clona el repositorio del proyecto:
+
+   ```bash
+   git clone https://github.com/SrMeirins/finddomains.git
+   ```
+
+2. Navega al directorio del proyecto recién clonado:
+
+   ```bash
+   cd finddomains
+   ```
+   
 ### VENV
 
 #### Windows
@@ -36,20 +50,6 @@ Para evitar conflictos con otras dependencias de Python en tu sistema, es recome
 3. Activa el entorno virtual:
    ```bash
    source venv/bin/activate
-   ```
-
-### Clonar el repositorio
-
-1. Una vez que hayas creado y activado el entorno virtual, clona el repositorio del proyecto:
-
-   ```bash
-   git clone https://github.com/SrMeirins/finddomains.git
-   ```
-
-2. Navega al directorio del proyecto recién clonado:
-
-   ```bash
-   cd finddomains
    ```
 
 ### Instalación de dependencias
