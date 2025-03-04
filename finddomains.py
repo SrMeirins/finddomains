@@ -1,12 +1,16 @@
-import os
-import argparse
-import re
-import json
-import yaml
-import requests
-import sys
-from colorama import Fore, Style, init
-from pwn import log
+try:
+    import os
+    import argparse
+    import re
+    import json
+    import yaml
+    import requests
+    import sys
+    from colorama import Fore, Style, init
+    from pwn import log
+except ImportError as e:
+    print(f"Error al importar módulos: {e} -- Prueba a instalarlos con 'pip install -r requirements.txt'")
+    sys.exit(1)
 
 # Inicializar colorama para soportar colores en Windows
 init(autoreset=True)
@@ -149,6 +153,26 @@ def get_certspotter_domains(domain):
         error_log.append(f"Error al obtener datos de CertSpotter: {e}")
         return {}
 
+def get_hackertarget_domains(domain):
+    task = log.progress("Consultando HackerTarget")
+    try:
+        response = requests.get(f"https://api.hackertarget.com/hostsearch/?q={domain}")
+        response.raise_for_status()
+        
+        # Extraer los subdominios de la respuesta
+        subdomains = {}
+        for line in response.text.splitlines():
+            if len(line.split(",")) > 0:
+                subdomain = line.split(",")[0]
+                subdomains[subdomain] = ["HackerTarget"]
+        
+        task.success("Completado")
+        return subdomains
+    except requests.RequestException as e:
+        task.failure("Error")
+        error_log.append(f"Error al obtener datos de HackerTarget: {e}")
+        return {}
+
 # Combinar resultados de múltiples fuentes y eliminar duplicados
 def get_combined_domains(domain, api_keys):
     combined_domains = {}
@@ -182,6 +206,11 @@ def get_combined_domains(domain, api_keys):
     # Obtener subdominios de CertSpotter
     certspotter_results = get_certspotter_domains(domain)
     for subdomain, sources in certspotter_results.items():
+        combined_domains.setdefault(subdomain, []).extend(sources)
+
+    # Obtener subdominios de HackerTarget
+    hackertarget_results = get_hackertarget_domains(domain)
+    for subdomain, sources in hackertarget_results.items():
         combined_domains.setdefault(subdomain, []).extend(sources)
       
     # Eliminar duplicados en las listas de fuentes
