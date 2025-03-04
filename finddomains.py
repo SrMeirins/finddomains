@@ -221,6 +221,18 @@ def get_bevigil_domains(domain, api_key):
         error_log.append(f"Error al obtener datos de BeVigil: {e}")
         return {}
 
+def clean_subdomain(subdomain, root_domain):
+    if root_domain not in subdomain:
+        return None  
+    # Eliminar el prefijo '*.' o '.'
+    if subdomain.startswith("*."):
+        return subdomain[2:]
+    elif subdomain.startswith("."):
+        return subdomain[1:]
+    if not subdomain or subdomain == root_domain or subdomain == ".":
+        return None
+    return subdomain
+
 # Combinar resultados de múltiples fuentes y eliminar duplicados
 def get_combined_domains(domain, api_keys):
     combined_domains = {}
@@ -228,49 +240,49 @@ def get_combined_domains(domain, api_keys):
     # Obtener subdominios de crt.sh
     crtsh_results = get_crtsh_domains(domain)
     for subdomain, sources in crtsh_results.items():
-        combined_domains.setdefault(subdomain, []).extend(sources)
+        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
 
     # Obtener subdominios de SecurityTrails
     if "securitytrails" in api_keys and api_keys["securitytrails"].get("api_key"):
         securitytrails_results = get_securitytrails_domains(domain, api_keys["securitytrails"]["api_key"])
         for subdomain, sources in securitytrails_results.items():
-            combined_domains.setdefault(subdomain, []).extend(sources)
+            combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
     else:
         error_log.append("SecurityTrails API key no encontrada o no válida en el archivo APIs.yaml.")
     
     # Obtener subdominios de AlienVault
     alienvault_results = get_alienvault_domains(domain)
     for subdomain, sources in alienvault_results.items():
-        combined_domains.setdefault(subdomain, []).extend(sources)
+        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
 
     # Obtener subdominios de VirusTotal
     if "virustotal" in api_keys and api_keys["virustotal"].get("api_key"):
         virustotal_results = get_virustotal_domains(domain, api_keys["virustotal"]["api_key"])
         for subdomain, sources in virustotal_results.items():
-            combined_domains.setdefault(subdomain, []).extend(sources)
+            combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
     else:
         error_log.append("VirusTotal API key no encontrada o no válida en el archivo APIs.yaml.")
 
     # Obtener subdominios de CertSpotter
     certspotter_results = get_certspotter_domains(domain)
     for subdomain, sources in certspotter_results.items():
-        combined_domains.setdefault(subdomain, []).extend(sources)
+        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
 
     # Obtener subdominios de HackerTarget
     hackertarget_results = get_hackertarget_domains(domain)
     for subdomain, sources in hackertarget_results.items():
-        combined_domains.setdefault(subdomain, []).extend(sources)
+        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
 
     # Obtener subdominios de C99
     c99_results = get_c99_domains(domain)
     for subdomain, sources in c99_results.items():
-        combined_domains.setdefault(subdomain, []).extend(sources)
+        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
 
     # Obtener subdominios de BeVigil
     if "bevigil" in api_keys and api_keys["bevigil"].get("api_key"):
       bevigil_results = get_bevigil_domains(domain, api_keys["bevigil"]["api_key"])
       for subdomain, sources in bevigil_results.items():
-          combined_domains.setdefault(subdomain, []).extend(sources)
+          combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
     else:
         error_log.append("BeVigil API key no encontrada o no válida en el archivo APIs.yaml.")
     
