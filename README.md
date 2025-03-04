@@ -110,6 +110,8 @@ securitytrails:
   api_key: "TU_API_KEY_AQUI"
 virustotal:
   api_key: "TU_API_KEY_AQUI"
+bevigil:
+  api_key: "TU_API_KEY_AQUI"
 ```
 
 ## 📝 Contribuir
