@@ -2,3 +2,5 @@ pyyaml
 requests
 colorama
 pwntools
+datetime
+bs4

@@ -6,6 +6,8 @@ try:
     import yaml
     import requests
     import sys
+    from datetime import date
+    from bs4 import BeautifulSoup
     from colorama import Fore, Style, init
     from pwn import log
 except ImportError as e:
@@ -25,13 +27,13 @@ DOMAIN_REGEX = r"^[a-zA-Z0-9][-a-zA-Z0-9]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,63}$"
 def show_banner():
     banner = f"""
 {Fore.CYAN}#################################################################
-{Fore.GREEN}                             FINDDOMAINS TOOL                   
-{Fore.GREEN}-----------------------------------------------------------------
-{Fore.RESET}                       Creado por: SrMeirins                 
-{Fore.GREEN}-----------------------------------------------------------------
-{Fore.RESET}   Esta herramienta busca subdominios asociados a un dominio    
+{Fore.GREEN}                       FINDDOMAINS TOOL                   
+{Fore.GREEN}----------------------------------------------------------------
+{Fore.RESET}                     Creado por: SrMeirins                 
+{Fore.GREEN}----------------------------------------------------------------
+{Fore.RESET}   Esta herramienta busca subdominios asociados a un dominio
 {Fore.RESET}   dado, proporcionando un método eficiente para el descubrimiento.
-{Fore.GREEN}-----------------------------------------------------------------
+{Fore.GREEN}----------------------------------------------------------------
 {Fore.CYAN}#################################################################{Style.RESET_ALL}
 """
     print(banner)
@@ -153,6 +155,7 @@ def get_certspotter_domains(domain):
         error_log.append(f"Error al obtener datos de CertSpotter: {e}")
         return {}
 
+# Obtener subdominios de HackerTarget
 def get_hackertarget_domains(domain):
     task = log.progress("Consultando HackerTarget")
     try:
@@ -172,6 +175,33 @@ def get_hackertarget_domains(domain):
         task.failure("Error")
         error_log.append(f"Error al obtener datos de HackerTarget: {e}")
         return {}
+    
+# Obtener subdominios de C99
+def get_c99_domains(domain):
+    task = log.progress("Consultando C99")
+    try:
+        # Obtener fecha actual en formato YYYY-MM-DD
+        today = date.today().strftime("%Y-%m-%d")
+        response = requests.get(f"https://subdomainfinder.c99.nl/scans/{today}/{domain}")
+        response.raise_for_status()
+
+        # Extraer los subdominios de la respuesta
+        subdomains = {}
+        soup = BeautifulSoup(response.text, "html.parser")
+        links = soup.find_all("a", rel="noreferrer")
+        for link in links:
+            subdomain = link.get_text(strip=True)
+            if domain in subdomain:
+                subdomains[subdomain] = ["C99"]
+
+        task.success("Completado")
+        return subdomains
+    except requests.RequestException as e:
+        task.failure("Error")
+        error_log.append(f"Error al obtener datos de C99: {e}")
+        return {}
+
+        
 
 # Combinar resultados de múltiples fuentes y eliminar duplicados
 def get_combined_domains(domain, api_keys):
@@ -211,6 +241,11 @@ def get_combined_domains(domain, api_keys):
     # Obtener subdominios de HackerTarget
     hackertarget_results = get_hackertarget_domains(domain)
     for subdomain, sources in hackertarget_results.items():
+        combined_domains.setdefault(subdomain, []).extend(sources)
+
+    # Obtener subdominios de C99
+    c99_results = get_c99_domains(domain)
+    for subdomain, sources in c99_results.items():
         combined_domains.setdefault(subdomain, []).extend(sources)
       
     # Eliminar duplicados en las listas de fuentes
