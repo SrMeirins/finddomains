@@ -55,9 +55,10 @@ def get_crtsh_domains(domain):
         response = requests.get(f"https://crt.sh/?q={domain}&output=json")
         response.raise_for_status()
         response_json = response.json()
-        domains = {entry.get("common_name").replace("*", ""): ["crt.sh"] for entry in response_json}
-        task.success("Completado")
-        return domains
+        subdomains = {entry.get("common_name").replace("*", ""): ["crt.sh"] for entry in response_json}
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
+        return subdomains
     except requests.RequestException as e:
         task.failure("Error")
         error_log.append(f"Error al obtener datos de crt.sh: {e}")
@@ -85,7 +86,8 @@ def get_securitytrails_domains(domain, api_key):
         response.raise_for_status()
         data = response.json()
         subdomains = {f"{sub}.{domain}": ["SecurityTrails"] for sub in data.get("subdomains", [])}
-        task.success("Completado")
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
         return subdomains
     except requests.RequestException as e:
         task.failure("Error")
@@ -101,7 +103,8 @@ def get_alienvault_domains(domain):
         response.raise_for_status()
         data = response.json()
         subdomains = {entry.get("hostname"): ["AlienVault OTX"] for entry in data.get("passive_dns", [])}
-        task.success("Completado")
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
         return subdomains
     except requests.RequestException as e:
         task.failure("Error")
@@ -125,7 +128,8 @@ def get_virustotal_domains(domain, api_key):
         response.raise_for_status()
         data = response.json()
         subdomains = {sub["domain"]: ["VirusTotal"] for sub in data.get("subdomains", [])}
-        task.success("Completado")
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
         return subdomains
     except requests.RequestException as e:
         task.failure("Error")
@@ -148,7 +152,8 @@ def get_certspotter_domains(domain):
                 if domain in subdomain:  # Filtrar solo los que contienen el dominio base
                     subdomains[subdomain] = ["CertSpotter"]
         
-        task.success("Completado")
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
         return subdomains
     except requests.RequestException as e:
         task.failure("Error")
@@ -169,38 +174,14 @@ def get_hackertarget_domains(domain):
                 subdomain = line.split(",")[0]
                 subdomains[subdomain] = ["HackerTarget"]
         
-        task.success("Completado")
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
         return subdomains
     except requests.RequestException as e:
         task.failure("Error")
         error_log.append(f"Error al obtener datos de HackerTarget: {e}")
         return {}
     
-# Obtener subdominios de C99
-def get_c99_domains(domain):
-    task = log.progress("Consultando C99")
-    try:
-        # Obtener fecha actual en formato YYYY-MM-DD
-        today = date.today().strftime("%Y-%m-%d")
-        response = requests.get(f"https://subdomainfinder.c99.nl/scans/{today}/{domain}")
-        response.raise_for_status()
-
-        # Extraer los subdominios de la respuesta
-        subdomains = {}
-        soup = BeautifulSoup(response.text, "html.parser")
-        links = soup.find_all("a", rel="noreferrer")
-        for link in links:
-            subdomain = link.get_text(strip=True)
-            if domain in subdomain:
-                subdomains[subdomain] = ["C99"]
-
-        task.success("Completado")
-        return subdomains
-    except requests.RequestException as e:
-        task.failure("Error")
-        error_log.append(f"Error al obtener datos de C99: {e}")
-        return {}
-
 # Obtener subdominios de BeVigil
 def get_bevigil_domains(domain, api_key):
     task = log.progress("Consultando BeVigil")
@@ -214,7 +195,8 @@ def get_bevigil_domains(domain, api_key):
         response.raise_for_status()
         data = response.json()
         subdomains = {subdomain: ["BeVigil"] for subdomain in data.get("subdomains", [])}
-        task.success("Completado")
+        subdomain_count = len(subdomains)
+        task.success(f"Completado -- Subdominios Detectados: ({subdomain_count})")
         return subdomains
     except requests.RequestException as e:
         task.failure("Error")
@@ -240,49 +222,59 @@ def get_combined_domains(domain, api_keys):
     # Obtener subdominios de crt.sh
     crtsh_results = get_crtsh_domains(domain)
     for subdomain, sources in crtsh_results.items():
-        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+        cleaned_subdomain = clean_subdomain(subdomain, domain)
+        if cleaned_subdomain:
+            combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
+        
 
     # Obtener subdominios de SecurityTrails
     if "securitytrails" in api_keys and api_keys["securitytrails"].get("api_key"):
         securitytrails_results = get_securitytrails_domains(domain, api_keys["securitytrails"]["api_key"])
         for subdomain, sources in securitytrails_results.items():
-            combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+            cleaned_subdomain = clean_subdomain(subdomain, domain)
+            if cleaned_subdomain:
+                combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
     else:
         error_log.append("SecurityTrails API key no encontrada o no válida en el archivo APIs.yaml.")
     
     # Obtener subdominios de AlienVault
     alienvault_results = get_alienvault_domains(domain)
     for subdomain, sources in alienvault_results.items():
-        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+        cleaned_subdomain = clean_subdomain(subdomain, domain)
+        if cleaned_subdomain:
+            combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
 
     # Obtener subdominios de VirusTotal
     if "virustotal" in api_keys and api_keys["virustotal"].get("api_key"):
         virustotal_results = get_virustotal_domains(domain, api_keys["virustotal"]["api_key"])
         for subdomain, sources in virustotal_results.items():
-            combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+            cleaned_subdomain = clean_subdomain(subdomain, domain)
+            if cleaned_subdomain:
+                combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
     else:
         error_log.append("VirusTotal API key no encontrada o no válida en el archivo APIs.yaml.")
 
     # Obtener subdominios de CertSpotter
     certspotter_results = get_certspotter_domains(domain)
     for subdomain, sources in certspotter_results.items():
-        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+        cleaned_subdomain = clean_subdomain(subdomain, domain)
+        if cleaned_subdomain:
+            combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
 
     # Obtener subdominios de HackerTarget
     hackertarget_results = get_hackertarget_domains(domain)
     for subdomain, sources in hackertarget_results.items():
-        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
-
-    # Obtener subdominios de C99
-    c99_results = get_c99_domains(domain)
-    for subdomain, sources in c99_results.items():
-        combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+        cleaned_subdomain = clean_subdomain(subdomain, domain)
+        if cleaned_subdomain:
+            combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
 
     # Obtener subdominios de BeVigil
     if "bevigil" in api_keys and api_keys["bevigil"].get("api_key"):
       bevigil_results = get_bevigil_domains(domain, api_keys["bevigil"]["api_key"])
       for subdomain, sources in bevigil_results.items():
-          combined_domains.setdefault(clean_subdomain(subdomain, domain), []).extend(sources)
+        cleaned_subdomain = clean_subdomain(subdomain, domain)
+        if cleaned_subdomain:
+            combined_domains.setdefault(cleaned_subdomain, []).extend(sources)
     else:
         error_log.append("BeVigil API key no encontrada o no válida en el archivo APIs.yaml.")
     
