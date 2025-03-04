@@ -92,6 +92,10 @@ Actualmente, la herramienta utiliza las siguientes fuentes para recolectar subdo
 
 🔹 CertSpotter
 
+🔹 HackerTarget
+
+🔹 C99
+
 
 ## 🛠 Futuras Mejoras
 
