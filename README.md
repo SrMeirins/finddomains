@@ -94,7 +94,7 @@ Actualmente, la herramienta utiliza las siguientes fuentes para recolectar subdo
 
 🔹 HackerTarget
 
-🔹 C99
+🔹 BeVigil
 
 
 ## 🛠 Futuras Mejoras
