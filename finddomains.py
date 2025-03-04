@@ -201,7 +201,25 @@ def get_c99_domains(domain):
         error_log.append(f"Error al obtener datos de C99: {e}")
         return {}
 
-        
+# Obtener subdominios de BeVigil
+def get_bevigil_domains(domain, api_key):
+    task = log.progress("Consultando BeVigil")
+    if not api_key:
+        task.failure("API key no proporcionada")
+        error_log.append("No se proporcionó API key para BeVigil.")
+        return {}
+    
+    try:
+        response = requests.get(f"http://osint.bevigil.com/api/netflix.com/subdomains/", headers={'X-Access-Token' : api_key})
+        response.raise_for_status()
+        data = response.json()
+        subdomains = {subdomain: ["BeVigil"] for subdomain in data.get("subdomains", [])}
+        task.success("Completado")
+        return subdomains
+    except requests.RequestException as e:
+        task.failure("Error")
+        error_log.append(f"Error al obtener datos de BeVigil: {e}")
+        return {}
 
 # Combinar resultados de múltiples fuentes y eliminar duplicados
 def get_combined_domains(domain, api_keys):
@@ -247,7 +265,15 @@ def get_combined_domains(domain, api_keys):
     c99_results = get_c99_domains(domain)
     for subdomain, sources in c99_results.items():
         combined_domains.setdefault(subdomain, []).extend(sources)
-      
+
+    # Obtener subdominios de BeVigil
+    if "bevigil" in api_keys and api_keys["bevigil"].get("api_key"):
+      bevigil_results = get_bevigil_domains(domain, api_keys["bevigil"]["api_key"])
+      for subdomain, sources in bevigil_results.items():
+          combined_domains.setdefault(subdomain, []).extend(sources)
+    else:
+        error_log.append("BeVigil API key no encontrada o no válida en el archivo APIs.yaml.")
+    
     # Eliminar duplicados en las listas de fuentes
     for subdomain in combined_domains:
         combined_domains[subdomain] = list(set(combined_domains[subdomain]))

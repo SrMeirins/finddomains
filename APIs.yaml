@@ -2,3 +2,5 @@ securitytrails:
   api_key: ""
 virustotal:
   api_key: ""
+bevigil:
+  api_key: ""
